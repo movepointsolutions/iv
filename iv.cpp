@@ -136,7 +136,7 @@ int main(int argc, char **argv)
 				wrefresh(window.cmdline());
 				break;
 			}
-			if (mode == mode_type::COMMAND && c == 10) {
+			if (mode == mode_type::COMMAND && c == '\n') {
 				mode = mode_type::NORMAL;
 				wclear(window.cmdline());
 				wrefresh(window.cmdline());
