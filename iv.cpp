@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cctype> /* isprint */
+#include <cstdlib> /* exit() */
 #include <fstream>
 #include <functional>
 #include <initializer_list>
@@ -41,6 +42,7 @@ struct buffer
 		if (_filename.empty())
 			_filename = filename;
 		std::ifstream stream(_filename);
+		stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		read(stream);
 	}
 
@@ -49,6 +51,7 @@ struct buffer
 		if (_filename.empty())
 			throw std::invalid_argument(":o needs an argument");
 		std::ifstream stream(_filename);
+		stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		read(stream);
 		filename = _filename;
 	}
@@ -58,6 +61,7 @@ struct buffer
 		if (_filename.empty())
 			_filename = filename;
 		std::ofstream stream(_filename);
+		stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		write(stream);
 	}
 
@@ -66,6 +70,7 @@ struct buffer
 		if (_filename.empty())
 			throw std::invalid_argument(":saveas needs an argument");
 		std::ofstream stream(_filename);
+		stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		write(stream);
 		filename = _filename;
 	}
@@ -121,7 +126,9 @@ void handle_command(const std::string &command)
 	std::istringstream args(command);
 	std::string arg0;
 	args >> arg0;
-	if (arg0 == "r") {
+	if (arg0 == "q" || arg0 == "quit") {
+		exit(0);
+	} else if (arg0 == "r") {
 		std::string filename;
 		if (args >> filename)
 			buf.r(filename);
@@ -176,27 +183,59 @@ void key_bindings::add_command_binding(int key, const char *cmd)
 	bindings.emplace(key, std::bind(handle_command, cmd));
 }
 
+std::string command;
+
+key_bindings any_bindings({
+	{12, []() { win.update(); }} /* C-L */
+});
+
+key_bindings normal_bindings({
+	{':', []() {
+		mode = mode_type::COMMAND;
+		wclear(win.cmdline());
+		wprintw(win.cmdline(), ":");
+		wrefresh(win.cmdline());
+		command = std::string();
+	}}
+});
+
+key_bindings insert_bindings({});
+key_bindings command_bindings({});
+
+void handle_key()
+{
+	int c = win.input();
+	wprintw(win.status(), "%d %s ", c, key_name(c));
+	do {
+		if (any_bindings.handle(c))
+			break;
+		if (mode == mode_type::NORMAL && normal_bindings.handle(c))
+			break;
+		if (mode != mode_type::NORMAL && c == 27) {
+			mode = mode_type::NORMAL;
+			win.update();
+			break;
+		}
+		if (mode == mode_type::COMMAND && std::isprint(c)) {
+			char string[] = {(char)c, '\0'};
+			command.push_back(c);
+			wprintw(win.cmdline(), string);
+			wrefresh(win.cmdline());
+			break;
+		}
+		if (mode == mode_type::COMMAND && c == '\n') {
+			mode = mode_type::NORMAL;
+			wclear(win.cmdline());
+			wrefresh(win.cmdline());
+			handle_command(command);
+			break;
+		}
+	} while (false);
+}
+
 int main(int argc, char **argv)
 {
-	std::string command;
 	using namespace std::placeholders;
-
-	key_bindings any_bindings({
-		{12, []() { win.update(); }} /* C-L */
-	});
-
-	key_bindings normal_bindings({
-		{':', [&command]() {
-			mode = mode_type::COMMAND;
-			wclear(win.cmdline());
-			wprintw(win.cmdline(), ":");
-			wrefresh(win.cmdline());
-			command = std::string();
-		}}
-	});
-
-	key_bindings insert_bindings({});
-	key_bindings command_bindings({});
 
 	auto map = std::bind(&key_bindings::add_command_binding, &any_bindings, _1, _2);
 	auto nmap = std::bind(&key_bindings::add_command_binding, &normal_bindings, _1, _2);
@@ -207,32 +246,12 @@ int main(int argc, char **argv)
 
 	wprintw(win.file(), "Test");
 	while (true) {
-		int c = win.input();
-		wprintw(win.status(), "%d %s ", c, key_name(c));
-		do {
-			if (any_bindings.handle(c))
-				break;
-			if (mode == mode_type::NORMAL && normal_bindings.handle(c))
-				break;
-			if (mode != mode_type::NORMAL && c == 27) {
-				mode = mode_type::NORMAL;
-				win.update();
-				break;
-			}
-			if (mode == mode_type::COMMAND && std::isprint(c)) {
-				char string[] = {(char)c, '\0'};
-				command.push_back(c);
-				wprintw(win.cmdline(), string);
-				wrefresh(win.cmdline());
-				break;
-			}
-			if (mode == mode_type::COMMAND && c == '\n') {
-				mode = mode_type::NORMAL;
-				wclear(win.cmdline());
-				wrefresh(win.cmdline());
-				handle_command(command);
-				break;
-			}
-		} while (false);
+		try {
+			handle_key();
+		} catch (const std::exception &exc) {
+			wclear(win.status());
+			wprintw(win.status(), exc.what());
+			wrefresh(win.status());
+		}
 	}
 }
