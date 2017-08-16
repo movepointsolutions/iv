@@ -106,6 +106,7 @@ public:
 	void update_file();
 	void update_status();
 	void update_cmdline();
+	void for_each_char(std::function<void (char, int, int)> callback);
 } win;
 
 Window::Window()
@@ -126,6 +127,11 @@ Window::~Window()
 	endwin();
 }
 
+static void activate(WINDOW *w)
+{
+	wrefresh(w);
+}
+
 void Window::update()
 {
 	clear();
@@ -136,13 +142,13 @@ void Window::update()
 		wnoutrefresh(w);
 	switch (mode) {
 	case mode_type::NORMAL:
-		wmove(file(), 0, 0);
+		activate(file());
 		break;
 	case mode_type::INSERT:
-		wmove(file(), 0, 0);
+		activate(file());
 		break;
 	case mode_type::COMMAND:
-		wmove(cmdline(), 0, command().size() + 1);
+		activate(cmdline());
 		break;
 	}
 	doupdate();
@@ -150,11 +156,18 @@ void Window::update()
 
 void Window::update_file()
 {
+	wclear(file());
+	for_each_char([this](char c, int y, int x) {
+		waddch(file(), c);
+	});
+}
+
+void Window::for_each_char(std::function<void (char, int, int)> callback)
+{
 	int x = 0, y = 0;
 	int maxx, maxy;
 	getmaxyx(file(), maxy, maxx);
-	wclear(file());
-	for (std::list<char>::iterator i = buf.chars.begin(); i != buf.chars.end(); ++i) {
+	for (std::list<char>::iterator i = buf.start; i != buf.chars.end(); ++i) {
 		if (x >= maxx || y >= maxy)
 			break;
 
@@ -165,7 +178,7 @@ void Window::update_file()
 			x++;
 		}
 
-		waddch(file(), *i);
+		callback(*i, y, x);
 	}
 }
 
