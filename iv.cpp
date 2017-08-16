@@ -17,8 +17,9 @@
 
 struct buffer
 {
-	std::list<char> chars;
-	std::list<char>::iterator start, cursor;
+	typedef std::map<std::pair<int, int>, char> chars_type;
+	chars_type chars;
+	chars_type::iterator start, cursor;
 	std::string filename;
 
 	buffer() : chars(), start(chars.begin()), cursor(chars.begin()) {}
@@ -27,15 +28,34 @@ struct buffer
 		r();
 	}
 
+	template <class Iterator>
+	void assign(Iterator begin, Iterator end)
+	{
+		int x = 0, y = 0;
+		chars.clear();
+		while (begin != end) {
+			chars.insert(std::make_pair(std::make_pair(y, x), *begin));
+			if (*begin++ == '\n') {
+				x = 0;
+				y++;
+			} else {
+				x++;
+			}
+		}
+		start = cursor = chars.begin();
+	}
+
 	void read(std::istream &stream)
 	{
-		chars.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+		assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
 		start = cursor = chars.begin();
 	}
 
 	void write(std::ostream &stream)
 	{
-		std::copy(chars.begin(), chars.end(), std::ostreambuf_iterator<char>(stream));
+		std::ostreambuf_iterator<char> it(stream);
+		for (auto c : chars)
+			*it++ = c.second;
 	}
 
 	void r(std::string _filename = std::string())
@@ -106,7 +126,7 @@ public:
 	void update_file();
 	void update_status();
 	void update_cmdline();
-	void for_each_char(std::function<void (std::list<char>::iterator, int, int)> callback);
+	void activate_window();
 } win;
 
 Window::Window()
@@ -140,17 +160,7 @@ void Window::update()
 	update_cmdline();
 	for (WINDOW *w: {file(), status(), cmdline()})
 		wnoutrefresh(w);
-	switch (mode) {
-	case mode_type::NORMAL:
-		activate(file());
-		break;
-	case mode_type::INSERT:
-		activate(file());
-		break;
-	case mode_type::COMMAND:
-		activate(cmdline());
-		break;
-	}
+	activate_window();
 	doupdate();
 }
 
@@ -158,35 +168,15 @@ void Window::update_file()
 {
 	int curx = -1, cury = -1;
 	wclear(file());
-	for_each_char([this, &curx, &cury](std::list<char>::iterator i, int y, int x) {
-		waddch(file(), *i);
+	for (buffer::chars_type::iterator i = buf.start; i != buf.chars.end(); i++) {
+		waddch(file(), i->second);
 		if (i == buf.cursor) {
-			curx = x;
-			cury = y;
+			cury = i->first.first;
+			curx = i->first.second;
 		}
-	});
+	}
 	if (curx >= 0) {
 		wmove(file(), cury, curx);
-	}
-}
-
-void Window::for_each_char(std::function<void (std::list<char>::iterator, int, int)> callback)
-{
-	int x = 0, y = 0;
-	int maxx, maxy;
-	getmaxyx(file(), maxy, maxx);
-	for (std::list<char>::iterator i = buf.start; i != buf.chars.end(); ++i) {
-		if (x >= maxx || y >= maxy)
-			break;
-
-		callback(i, y, x);
-
-		if (*i == '\n') {
-			x = 0;
-			y++;
-		} else {
-			x++;
-		}
 	}
 }
 
@@ -205,6 +195,21 @@ void Window::update_cmdline()
 		wprintw(cmdline(), command().c_str());
 	}
 	wrefresh(cmdline());
+}
+
+void Window::activate_window()
+{
+	switch (mode) {
+	case mode_type::NORMAL:
+		activate(file());
+		break;
+	case mode_type::INSERT:
+		activate(file());
+		break;
+	case mode_type::COMMAND:
+		activate(cmdline());
+		break;
+	}
 }
 
 void handle_command(const std::string &command)
@@ -289,6 +294,7 @@ key_bindings command_bindings({
 		else
 			win.command().pop_back();
 		win.update_cmdline();
+		win.activate_window();
 	}}
 });
 
