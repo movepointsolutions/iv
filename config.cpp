@@ -1,0 +1,12 @@
+nmap('h', "cursor left");
+nmap('l', "cursor right");
+nmap('k', "cursor up");
+nmap('j', "cursor down");
+nmap(KEY_LEFT, "cursor left");
+nmap(KEY_RIGHT, "cursor right");
+nmap(KEY_UP, "cursor up");
+nmap(KEY_DOWN, "cursor down");
+imap(KEY_LEFT, "cursor left");
+imap(KEY_RIGHT, "cursor right");
+imap(KEY_UP, "cursor up");
+imap(KEY_DOWN, "cursor down");

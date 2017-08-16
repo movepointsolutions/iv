@@ -52,6 +52,12 @@ void Window::update()
 		wrefresh(w);
 }
 
+void handle_command(const std::string &command)
+{
+	std::string x = "[" + command + "]";
+	wprintw(window.file(), x.c_str());
+}
+
 enum class mode_type {
 	NORMAL,
 	INSERT,
@@ -64,6 +70,7 @@ struct key_bindings
 	std::map<binding::first_type, binding::second_type> bindings;
 	key_bindings(const std::initializer_list<binding> &_bindings) : bindings(_bindings) { }
 	bool handle(int key);
+	void add_command_binding(int key, const char *cmd);
 };
 
 bool key_bindings::handle(int key)
@@ -74,15 +81,15 @@ bool key_bindings::handle(int key)
 	return ret;
 }
 
-void handle_command(const std::string &command)
+void key_bindings::add_command_binding(int key, const char *cmd)
 {
-	std::string x = "[" + command + "]";
-	wprintw(window.file(), x.c_str());
+	bindings.emplace(key, std::bind(handle_command, cmd));
 }
 
 int main(int argc, char **argv)
 {
 	std::string command;
+	using namespace std::placeholders;
 
 	key_bindings any_bindings({
 		{12, []() { window.update(); }}
@@ -97,6 +104,16 @@ int main(int argc, char **argv)
 			command = std::string();
 		}}
 	});
+
+	key_bindings insert_bindings({});
+	key_bindings command_bindings({});
+
+	auto map = std::bind(&key_bindings::add_command_binding, &any_bindings, _1, _2);
+	auto nmap = std::bind(&key_bindings::add_command_binding, &normal_bindings, _1, _2);
+	auto imap = std::bind(&key_bindings::add_command_binding, &insert_bindings, _1, _2);
+	auto cmap = std::bind(&key_bindings::add_command_binding, &command_bindings, _1, _2);
+
+#include "config.cpp"
 
 	wprintw(window.file(), "Test");
 	while (true) {
