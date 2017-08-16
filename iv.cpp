@@ -4,6 +4,7 @@
 #include <fstream>
 #include <functional>
 #include <initializer_list>
+#include <iostream>
 #include <iterator>
 #include <list>
 #include <map>
@@ -333,6 +334,17 @@ int main(int argc, char **argv)
 
 	signal(SIGINT, sigint_handler);
 
+	if (argc > 2) {
+		std::cerr << "Usage: " << argv[0] << " [file]" << std::endl;
+		return 1;
+	} else if (argc == 2) {
+		buf.o(argv[1]);
+		win.update();
+	} else {
+		wprintw(win.file(), "IV -- simple vi clone");
+		win.update_status();
+	}
+
 	auto map = std::bind(&key_bindings::add_command_binding, &any_bindings, _1, _2);
 	auto nmap = std::bind(&key_bindings::add_command_binding, &normal_bindings, _1, _2);
 	auto imap = std::bind(&key_bindings::add_command_binding, &insert_bindings, _1, _2);
@@ -340,8 +352,6 @@ int main(int argc, char **argv)
 
 #include "config.cpp"
 
-	wprintw(win.file(), "IV -- simple vi clone");
-	win.update_status();
 	while (true) {
 		try {
 			handle_key();
