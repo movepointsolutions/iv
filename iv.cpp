@@ -156,10 +156,18 @@ void Window::update()
 
 void Window::update_file()
 {
+	int curx = -1, cury = -1;
 	wclear(file());
-	for_each_char([this](std::list<char>::iterator i, int y, int x) {
+	for_each_char([this, &curx, &cury](std::list<char>::iterator i, int y, int x) {
 		waddch(file(), *i);
+		if (i == buf.cursor) {
+			curx = x;
+			cury = y;
+		}
 	});
+	if (curx >= 0) {
+		wmove(file(), cury, curx);
+	}
 }
 
 void Window::for_each_char(std::function<void (std::list<char>::iterator, int, int)> callback)
@@ -171,14 +179,14 @@ void Window::for_each_char(std::function<void (std::list<char>::iterator, int, i
 		if (x >= maxx || y >= maxy)
 			break;
 
+		callback(i, y, x);
+
 		if (*i == '\n') {
 			x = 0;
 			y++;
 		} else {
 			x++;
 		}
-
-		callback(i, y, x);
 	}
 }
 
