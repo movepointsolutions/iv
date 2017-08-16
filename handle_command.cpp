@@ -52,5 +52,7 @@ void handle_command(const std::string &command)
 	} else if (arg0 == "100") {
 		buf.set_cursor(buf.chars.find(std::make_pair(100, 0)));
 		win.update_file();
+	} else if (arg0 == "refresh") {
+		win.update();
 	}
 }

@@ -15,6 +15,10 @@
 #include <signal.h>
 #include <stdio.h>
 
+#ifndef CTRL
+#define CTRL(c) ((c) & 037)
+#endif
+
 const int tab_size = 8;
 
 struct buffer
@@ -188,11 +192,17 @@ void Window::update()
 
 void Window::update_file()
 {
-	int curx = -1, cury = -1;
+	int col = 0;
 	wclear(file());
 	wmove(file(), 0, 0);
-	for (buffer::chars_type::iterator i = buf.start; i != buf.chars.end(); i++)
-		waddch(file(), i->second);
+	for (buffer::chars_type::iterator i = buf.start; i != buf.chars.end(); i++) {
+		if (col < COLS)
+			waddch(file(), i->second);
+		if (i->second == '\n')
+			col = 0;
+		else
+			col++;
+	}
 	wmove(file(), buf.cursor->first.first - buf.start->first.first, buf.cursor->first.second - buf.start->first.second);
 }
 
@@ -252,9 +262,7 @@ void key_bindings::add_command_binding(int key, const char *cmd)
 	bindings.emplace(key, std::bind(handle_command, cmd));
 }
 
-key_bindings any_bindings({
-	{12, []() { win.update(); }} /* C-L */
-});
+key_bindings any_bindings({});
 
 key_bindings normal_bindings({
 	{':', []() {

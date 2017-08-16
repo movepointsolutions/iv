@@ -10,3 +10,8 @@ imap(KEY_LEFT, "cursor left");
 imap(KEY_RIGHT, "cursor right");
 imap(KEY_UP, "cursor up");
 imap(KEY_DOWN, "cursor down");
+cmap(KEY_LEFT, "fuck a duck");
+cmap(KEY_RIGHT, "fuck a duck");
+cmap(KEY_UP, "fuck a duck");
+cmap(KEY_DOWN, "fuck a duck");
+map(CTRL('L'), "refresh");
