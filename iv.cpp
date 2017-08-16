@@ -15,6 +15,8 @@
 #include <signal.h>
 #include <stdio.h>
 
+const int tab_size = 8;
+
 struct buffer
 {
 	typedef std::map<std::pair<int, int>, char> chars_type;
@@ -34,15 +36,26 @@ struct buffer
 		int x = 0, y = 0;
 		chars.clear();
 		while (begin != end) {
-			chars.insert(std::make_pair(std::make_pair(y, x), *begin));
-			if (*begin++ == '\n') {
+			if (*begin == '\t') {
+				for (int i = 0; i < tab_size; i++)
+					chars.insert(std::make_pair(std::make_pair(y, x++), ' '));
+			} else if (*begin == '\n') {
+				chars.insert(std::make_pair(std::make_pair(y, x), *begin));
 				x = 0;
 				y++;
 			} else {
+				chars.insert(std::make_pair(std::make_pair(y, x), *begin));
 				x++;
 			}
+			++begin;
 		}
 		start = cursor = chars.begin();
+	}
+
+	void set_cursor(chars_type::iterator _cursor)
+	{
+		if (_cursor != chars.end())
+			cursor = _cursor;
 	}
 
 	void read(std::istream &stream)
@@ -212,43 +225,7 @@ void Window::activate_window()
 	}
 }
 
-void handle_command(const std::string &command)
-{
-	std::istringstream args(command);
-	std::string arg0;
-	args >> arg0;
-	if (arg0 == "q" || arg0 == "quit") {
-		exit(0);
-	} else if (arg0 == "r") {
-		std::string filename;
-		if (args >> filename)
-			buf.r(filename);
-		else
-			buf.r();
-		win.update_file();
-	} else if (arg0 == "w") {
-		std::string filename;
-		if (args >> filename)
-			buf.w(filename);
-		else
-			buf.w();
-	} else if (arg0 == "o" || arg0 == "e") {
-		std::string filename;
-		if (args >> filename)
-			buf.o(filename);
-		else
-			buf.o();
-		win.update_file();
-		win.update_status();
-	} else if (arg0 == "saveas") {
-		std::string filename;
-		if (args >> filename)
-			buf.saveas(filename);
-		else
-			buf.saveas();
-		win.update_status();
-	}
-}
+#include "handle_command.cpp"
 
 struct key_bindings
 {
