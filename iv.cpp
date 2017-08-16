@@ -106,7 +106,7 @@ public:
 	void update_file();
 	void update_status();
 	void update_cmdline();
-	void for_each_char(std::function<void (char, int, int)> callback);
+	void for_each_char(std::function<void (std::list<char>::iterator, int, int)> callback);
 } win;
 
 Window::Window()
@@ -157,12 +157,12 @@ void Window::update()
 void Window::update_file()
 {
 	wclear(file());
-	for_each_char([this](char c, int y, int x) {
-		waddch(file(), c);
+	for_each_char([this](std::list<char>::iterator i, int y, int x) {
+		waddch(file(), *i);
 	});
 }
 
-void Window::for_each_char(std::function<void (char, int, int)> callback)
+void Window::for_each_char(std::function<void (std::list<char>::iterator, int, int)> callback)
 {
 	int x = 0, y = 0;
 	int maxx, maxy;
@@ -178,7 +178,7 @@ void Window::for_each_char(std::function<void (char, int, int)> callback)
 			x++;
 		}
 
-		callback(*i, y, x);
+		callback(i, y, x);
 	}
 }
 
