@@ -1,7 +1,7 @@
 void handle_command(const std::string &command)
 {
 	std::istringstream args(command);
-	std::string arg0;
+	std::string arg0, arg1;
 	args >> arg0;
 	if (arg0 == "q" || arg0 == "quit") {
 		exit(0);
@@ -54,5 +54,34 @@ void handle_command(const std::string &command)
 		win.update_file();
 	} else if (arg0 == "refresh") {
 		win.update();
+	} else if (arg0 == "mode") {
+		std::string _mode;
+		if (args >> _mode) {
+			mode = _mode == "normal" ? mode_type::NORMAL :
+			       _mode == "insert" ? mode_type::INSERT :
+			                           mode_type::COMMAND;
+			if (mode == mode_type::COMMAND)
+				win.command = std::string();
+			win.update();
+		}
+	} else if (arg0 != "misc") {
+		throw std::invalid_argument("unknown command: " + arg0);
+	} else if (!(args >> arg1)) {
+		throw std::invalid_argument("need argument: " + arg0);
+	} else if (arg1 == "c:backspace") {
+		if (win.command.empty())
+			mode = mode_type::NORMAL;
+		else
+			win.command.pop_back();
+		win.update_cmdline();
+		win.activate_window();
+	} else if (arg1 == "escape") {
+		mode = mode_type::NORMAL;
+		win.update();
+	} else if (arg1 == "c:return") {
+		mode = mode_type::NORMAL;
+		wclear(win.cmdline);
+		wrefresh(win.cmdline);
+		handle_command(win.command);
 	}
 }

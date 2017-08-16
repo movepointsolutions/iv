@@ -135,20 +135,16 @@ struct screen_initializer
 	screen_initializer() { initscr(); }
 };
 
-class Window : public screen_initializer
+struct Window : public screen_initializer
 {
-	WINDOW *file_;
-	WINDOW *status_;
-	WINDOW *cmdline_;
-	std::string command_;
-public:
+	WINDOW *file;
+	WINDOW *status;
+	WINDOW *cmdline;
+	std::string command;
+
 	Window();
 	~Window();
-	WINDOW *file() { return file_; }
-	WINDOW *status() { return status_; }
-	WINDOW *cmdline() { return cmdline_; }
-	std::string &command() { return command_; }
-	int input() { return wgetch(file()); }
+	int input() { return wgetch(file); }
 	void update();
 	void update_file();
 	void update_status();
@@ -158,14 +154,14 @@ public:
 
 Window::Window()
 	: screen_initializer(),
-	file_(newwin(LINES - 2, COLS, 0, 0)),
-	status_(newwin(1, COLS, LINES - 2, 0)),
-	cmdline_(newwin(1, COLS, LINES - 1, 0))
+	file(newwin(LINES - 2, COLS, 0, 0)),
+	status(newwin(1, COLS, LINES - 2, 0)),
+	cmdline(newwin(1, COLS, LINES - 1, 0))
 {
 	clear();
 	noecho();
 	cbreak();
-	for (WINDOW *w: {stdscr, file(), status(), cmdline()})
+	for (WINDOW *w: {stdscr, file, status, cmdline})
 		keypad(w, TRUE);
 }
 
@@ -185,7 +181,7 @@ void Window::update()
 	update_file();
 	update_status();
 	update_cmdline();
-	for (WINDOW *w: {file(), status(), cmdline()})
+	for (WINDOW *w: {file, status, cmdline})
 		wnoutrefresh(w);
 	activate_window();
 	doupdate();
@@ -194,47 +190,47 @@ void Window::update()
 void Window::update_file()
 {
 	int col = 0;
-	wclear(file());
-	wmove(file(), 0, 0);
+	wclear(file);
+	wmove(file, 0, 0);
 	for (buffer::chars_type::iterator i = buf.start; i != buf.chars.end(); i++) {
 		if (col < COLS)
-			waddch(file(), i->second);
+			waddch(file, i->second);
 		if (i->second == '\n')
 			col = 0;
 		else
 			col++;
 	}
-	wmove(file(), buf.cursor->first.first - buf.start->first.first, buf.cursor->first.second - buf.start->first.second);
+	wmove(file, buf.cursor->first.first - buf.start->first.first, buf.cursor->first.second - buf.start->first.second);
 }
 
 void Window::update_status()
 {
-	wclear(status());
-	waddstr(status(), buf.filename.empty() ? "Untitled" : buf.filename.c_str());
-	wrefresh(status());
+	wclear(status);
+	waddstr(status, buf.filename.empty() ? "Untitled" : buf.filename.c_str());
+	wrefresh(status);
 }
 
 void Window::update_cmdline()
 {
-	wclear(cmdline());
+	wclear(cmdline);
 	if (mode == mode_type::COMMAND) {
-		wprintw(cmdline(), ":");
-		wprintw(cmdline(), command().c_str());
+		wprintw(cmdline, ":");
+		wprintw(cmdline, command.c_str());
 	}
-	wrefresh(cmdline());
+	wrefresh(cmdline);
 }
 
 void Window::activate_window()
 {
 	switch (mode) {
 	case mode_type::NORMAL:
-		activate(file());
+		activate(file);
 		break;
 	case mode_type::INSERT:
-		activate(file());
+		activate(file);
 		break;
 	case mode_type::COMMAND:
-		activate(cmdline());
+		activate(cmdline);
 		break;
 	}
 }
@@ -265,32 +261,15 @@ void key_bindings::add_command_binding(int key, const char *cmd)
 
 key_bindings any_bindings({});
 
-key_bindings normal_bindings({
-	{':', []() {
-		mode = mode_type::COMMAND;
-		wclear(win.cmdline());
-		wprintw(win.cmdline(), ":");
-		wrefresh(win.cmdline());
-		win.command() = std::string();
-	}}
-});
+key_bindings normal_bindings({});
 
 key_bindings insert_bindings({});
-key_bindings command_bindings({
-	{127, []() {
-		if (win.command().empty())
-			mode = mode_type::NORMAL;
-		else
-			win.command().pop_back();
-		win.update_cmdline();
-		win.activate_window();
-	}}
-});
+key_bindings command_bindings({});
 
 void handle_key()
 {
 	int c = win.input();
-	wprintw(win.status(), "%d %s ", c, key_name(c));
+	wprintw(win.status, "%d %s ", c, key_name(c));
 	do {
 		if (any_bindings.handle(c))
 			break;
@@ -300,23 +279,11 @@ void handle_key()
 			break;
 		if (mode == mode_type::COMMAND && command_bindings.handle(c))
 			break;
-		if (mode != mode_type::NORMAL && c == 27) {
-			mode = mode_type::NORMAL;
-			win.update();
-			break;
-		}
 		if (mode == mode_type::COMMAND && std::isprint(c)) {
 			char string[] = {(char)c, '\0'};
-			win.command().push_back(c);
-			wprintw(win.cmdline(), string);
-			wrefresh(win.cmdline());
-			break;
-		}
-		if (mode == mode_type::COMMAND && c == '\n') {
-			mode = mode_type::NORMAL;
-			wclear(win.cmdline());
-			wrefresh(win.cmdline());
-			handle_command(win.command());
+			win.command.push_back(c);
+			wprintw(win.cmdline, string);
+			wrefresh(win.cmdline);
 			break;
 		}
 		flash();
@@ -341,7 +308,7 @@ int main(int argc, char **argv)
 		buf.o(argv[1]);
 		win.update();
 	} else {
-		wprintw(win.file(), "IV -- simple vi clone");
+		wprintw(win.file, "IV -- simple vi clone");
 		win.update_status();
 	}
 
@@ -356,9 +323,9 @@ int main(int argc, char **argv)
 		try {
 			handle_key();
 		} catch (const std::exception &exc) {
-			wclear(win.status());
-			wprintw(win.status(), exc.what());
-			wrefresh(win.status());
+			wclear(win.status);
+			wprintw(win.status, exc.what());
+			wrefresh(win.status);
 		}
 	}
 }

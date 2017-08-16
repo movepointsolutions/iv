@@ -15,3 +15,9 @@ cmap(KEY_RIGHT, "fuck a duck");
 cmap(KEY_UP, "fuck a duck");
 cmap(KEY_DOWN, "fuck a duck");
 map(CTRL('L'), "refresh");
+
+nmap('i', "mode insert");
+nmap(':', "mode command");
+cmap(127, "misc c:backspace");
+map(27, "misc escape");
+cmap('\n', "misc c:return");
