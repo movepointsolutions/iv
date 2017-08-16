@@ -268,7 +268,6 @@ key_bindings command_bindings({});
 void handle_key()
 {
 	int c = win.input();
-	wprintw(win.status, "%d %s ", c, key_name(c));
 	do {
 		if (any_bindings.handle(c))
 			break;
@@ -289,9 +288,14 @@ void handle_key()
 	} while (false);
 }
 
+bool quit_on_sigint = false;
+
 void sigint_handler(int)
 {
-	win.update();
+	if (quit_on_sigint)
+		std::exit(0);
+	else
+		win.update();
 }
 
 int main(int argc, char **argv)
@@ -303,12 +307,20 @@ int main(int argc, char **argv)
 	if (argc > 2) {
 		std::cerr << "Usage: " << argv[0] << " [file]" << std::endl;
 		return 1;
-	} else if (argc == 2) {
-		buf.o(argv[1]);
-		win.update();
-	} else {
+	} else if (argc < 2){
 		wprintw(win.file, "IV -- simple vi clone");
 		win.update_status();
+	} else if (argv[1] == std::string("--dumpkeys")) {
+		quit_on_sigint = true;
+		while (true) {
+			int c = win.input();
+			wprintw(stdscr, "%d %s\n", c, key_name(c));
+			wrefresh(stdscr);
+		}
+		return 0;
+	} else {
+		buf.o(argv[1]);
+		win.update();
 	}
 
 	auto map = std::bind(&key_bindings::add_command_binding, &any_bindings, _1, _2);
