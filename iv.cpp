@@ -12,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <ncurses.h>
+#include <signal.h>
 #include <stdio.h>
 
 struct buffer
@@ -128,8 +129,23 @@ Window::~Window()
 void Window::update()
 {
 	clear();
+	update_file();
+	update_status();
+	update_cmdline();
 	for (WINDOW *w: {file(), status(), cmdline()})
-		wrefresh(w);
+		wnoutrefresh(w);
+	switch (mode) {
+	case mode_type::NORMAL:
+		wmove(file(), 0, 0);
+		break;
+	case mode_type::INSERT:
+		wmove(file(), 0, 0);
+		break;
+	case mode_type::COMMAND:
+		wmove(cmdline(), 0, command().size() + 1);
+		break;
+	}
+	doupdate();
 }
 
 void Window::update_file()
@@ -291,9 +307,16 @@ void handle_key()
 	} while (false);
 }
 
+void sigint_handler(int)
+{
+	win.update();
+}
+
 int main(int argc, char **argv)
 {
 	using namespace std::placeholders;
+
+	signal(SIGINT, sigint_handler);
 
 	auto map = std::bind(&key_bindings::add_command_binding, &any_bindings, _1, _2);
 	auto nmap = std::bind(&key_bindings::add_command_binding, &normal_bindings, _1, _2);
