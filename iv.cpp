@@ -72,6 +72,17 @@ struct buffer
 		}
 	}
 
+	void set_start(chars_type::iterator _start)
+	{
+		if (_start != chars.end()) {
+			start = _start;
+			while (cursor->first.first >= start->first.first + LINES - 2)
+				--cursor;
+			while (cursor->first.first < start->first.first)
+				++cursor;
+		}
+	}
+
 	void read(std::istream &stream)
 	{
 		assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());

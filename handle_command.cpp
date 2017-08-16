@@ -64,6 +64,26 @@ void handle_command(const std::string &command)
 				win.command = std::string();
 			win.update();
 		}
+	} else if (arg0 == "page") {
+		std::string direction;
+		if (args >> direction) {
+			if (direction == "up") {
+				buf.set_start(buf.chars.find(std::make_pair(std::max(0, buf.start->first.first - LINES + 2), 0)));
+			} else if (direction == "down") {
+				buf.set_start(buf.chars.find(std::make_pair(buf.start->first.first + LINES - 2, 0)));
+			}
+			win.update_file();
+		}
+	} else if (arg0 == "halfpage") {
+		std::string direction;
+		if (args >> direction) {
+			if (direction == "up") {
+				buf.set_start(buf.chars.find(std::make_pair(std::max(0, buf.start->first.first - LINES / 2 + 1), 0)));
+			} else if (direction == "down") {
+				buf.set_start(buf.chars.find(std::make_pair(buf.start->first.first + LINES / 2 - 1, 0)));
+			}
+			win.update_file();
+		}
 	} else if (arg0 != "misc") {
 		throw std::invalid_argument("unknown command: " + arg0);
 	} else if (!(args >> arg1)) {

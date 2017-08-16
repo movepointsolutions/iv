@@ -21,3 +21,12 @@ nmap(':', "mode command");
 cmap(127, "misc c:backspace");
 map(27, "misc escape");
 cmap('\n', "misc c:return");
+
+nmap(339, "page up");
+nmap(338, "page down");
+imap(339, "page up");
+imap(338, "page down");
+nmap(21, "halfpage up");
+nmap(4, "halfpage down");
+imap(21, "halfpage up");
+imap(4, "halfpage down");
