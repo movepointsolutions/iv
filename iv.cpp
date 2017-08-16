@@ -1,11 +1,75 @@
+#include <algorithm>
 #include <cctype> /* isprint */
+#include <fstream>
 #include <functional>
 #include <initializer_list>
+#include <iterator>
+#include <list>
 #include <map>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <ncurses.h>
 #include <stdio.h>
+
+struct buffer
+{
+	std::list<char> chars;
+	std::list<char>::iterator start, cursor;
+	std::string filename;
+
+	buffer() : chars(), start(chars.begin()), cursor(chars.begin()) {}
+	buffer(const std::string _filename) : filename(_filename)
+	{
+		r();
+	}
+
+	void read(std::istream &stream)
+	{
+		chars.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+		start = cursor = chars.begin();
+	}
+
+	void write(std::ostream &stream)
+	{
+		std::copy(chars.begin(), chars.end(), std::ostreambuf_iterator<char>(stream));
+	}
+
+	void r(std::string _filename = std::string())
+	{
+		if (_filename.empty())
+			_filename = filename;
+		std::ifstream stream(_filename);
+		read(stream);
+	}
+
+	void o(const std::string &_filename = std::string())
+	{
+		if (_filename.empty())
+			throw std::invalid_argument(":o needs an argument");
+		std::ifstream stream(_filename);
+		read(stream);
+		filename = _filename;
+	}
+
+	void w(std::string _filename = std::string())
+	{
+		if (_filename.empty())
+			_filename = filename;
+		std::ofstream stream(_filename);
+		write(stream);
+	}
+
+	void saveas(const std::string &_filename = std::string())
+	{
+		if (_filename.empty())
+			throw std::invalid_argument(":saveas needs an argument");
+		std::ofstream stream(_filename);
+		write(stream);
+		filename = _filename;
+	}
+} buf;
 
 struct screen_initializer
 {
@@ -25,7 +89,7 @@ public:
 	WINDOW *cmdline() { return cmdline_; }
 	int input() { return wgetch(file()); }
 	void update();
-} window;
+} win;
 
 Window::Window()
 	: screen_initializer(),
@@ -54,8 +118,34 @@ void Window::update()
 
 void handle_command(const std::string &command)
 {
-	std::string x = "[" + command + "]";
-	wprintw(window.file(), x.c_str());
+	std::istringstream args(command);
+	std::string arg0;
+	args >> arg0;
+	if (arg0 == "r") {
+		std::string filename;
+		if (args >> filename)
+			buf.r(filename);
+		else
+			buf.r();
+	} else if (arg0 == "w") {
+		std::string filename;
+		if (args >> filename)
+			buf.w(filename);
+		else
+			buf.w();
+	} else if (arg0 == "o") {
+		std::string filename;
+		if (args >> filename)
+			buf.o(filename);
+		else
+			buf.o();
+	} else if (arg0 == "saveas") {
+		std::string filename;
+		if (args >> filename)
+			buf.saveas(filename);
+		else
+			buf.saveas();
+	}
 }
 
 enum class mode_type {
@@ -92,15 +182,15 @@ int main(int argc, char **argv)
 	using namespace std::placeholders;
 
 	key_bindings any_bindings({
-		{12, []() { window.update(); }}
+		{12, []() { win.update(); }} /* C-L */
 	});
 
 	key_bindings normal_bindings({
 		{':', [&command]() {
 			mode = mode_type::COMMAND;
-			wclear(window.cmdline());
-			wprintw(window.cmdline(), ":");
-			wrefresh(window.cmdline());
+			wclear(win.cmdline());
+			wprintw(win.cmdline(), ":");
+			wrefresh(win.cmdline());
 			command = std::string();
 		}}
 	});
@@ -115,10 +205,10 @@ int main(int argc, char **argv)
 
 #include "config.cpp"
 
-	wprintw(window.file(), "Test");
+	wprintw(win.file(), "Test");
 	while (true) {
-		int c = window.input();
-		wprintw(window.status(), "%d %s ", c, key_name(c));
+		int c = win.input();
+		wprintw(win.status(), "%d %s ", c, key_name(c));
 		do {
 			if (any_bindings.handle(c))
 				break;
@@ -126,20 +216,20 @@ int main(int argc, char **argv)
 				break;
 			if (mode != mode_type::NORMAL && c == 27) {
 				mode = mode_type::NORMAL;
-				window.update();
+				win.update();
 				break;
 			}
 			if (mode == mode_type::COMMAND && std::isprint(c)) {
 				char string[] = {(char)c, '\0'};
 				command.push_back(c);
-				wprintw(window.cmdline(), string);
-				wrefresh(window.cmdline());
+				wprintw(win.cmdline(), string);
+				wrefresh(win.cmdline());
 				break;
 			}
 			if (mode == mode_type::COMMAND && c == '\n') {
 				mode = mode_type::NORMAL;
-				wclear(window.cmdline());
-				wrefresh(window.cmdline());
+				wclear(win.cmdline());
+				wrefresh(win.cmdline());
 				handle_command(command);
 				break;
 			}
