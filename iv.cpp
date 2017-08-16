@@ -54,8 +54,17 @@ struct buffer
 
 	void set_cursor(chars_type::iterator _cursor)
 	{
-		if (_cursor != chars.end())
+		if (_cursor != chars.end()) {
 			cursor = _cursor;
+			while (cursor->first.first >= start->first.first + LINES - 2)
+				do {
+					++start;
+				} while (start->first.second);
+			while (cursor->first.first < start->first.first)
+				do {
+					--start;
+				} while (start->first.second);
+		}
 	}
 
 	void read(std::istream &stream)
@@ -181,16 +190,10 @@ void Window::update_file()
 {
 	int curx = -1, cury = -1;
 	wclear(file());
-	for (buffer::chars_type::iterator i = buf.start; i != buf.chars.end(); i++) {
+	wmove(file(), 0, 0);
+	for (buffer::chars_type::iterator i = buf.start; i != buf.chars.end(); i++)
 		waddch(file(), i->second);
-		if (i == buf.cursor) {
-			cury = i->first.first;
-			curx = i->first.second;
-		}
-	}
-	if (curx >= 0) {
-		wmove(file(), cury, curx);
-	}
+	wmove(file(), buf.cursor->first.first - buf.start->first.first, buf.cursor->first.second - buf.start->first.second);
 }
 
 void Window::update_status()
