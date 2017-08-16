@@ -262,7 +262,6 @@ void key_bindings::add_command_binding(int key, const char *cmd)
 key_bindings any_bindings({});
 
 key_bindings normal_bindings({});
-
 key_bindings insert_bindings({});
 key_bindings command_bindings({});
 
