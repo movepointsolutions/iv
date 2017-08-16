@@ -1,4 +1,7 @@
+#include <functional>
 #include <initializer_list>
+#include <map>
+#include <utility>
 #include <ncurses.h>
 #include <stdio.h>
 
@@ -19,6 +22,7 @@ public:
 	WINDOW *status() { return status_; }
 	WINDOW *cmdline() { return cmdline_; }
 	int input() { return wgetch(file()); }
+	void update();
 };
 
 Window::Window()
@@ -39,14 +43,37 @@ Window::~Window()
 	endwin();
 }
 
+void Window::update()
+{
+	for (WINDOW *w: {file(), status(), cmdline()})
+		wrefresh(w);
+}
+
+struct environment
+{
+	Window window;
+};
+
+struct key_bindings
+{
+	typedef std::pair<const int, std::function<void ()>> binding;
+	std::map<binding::first_type, binding::second_type> bindings;
+	key_bindings(const std::initializer_list<binding> &_bindings) : bindings(_bindings) { }
+	void handle(int key) { if (bindings.count(key)) bindings[key](); }
+};
+
 int main(int argc, char **argv)
 {
-	int c;
 	{
-		Window win;
-		wprintw(win.status(), "Test");
-		wrefresh(win.status());
-		c = win.input();
+		environment e;
+		key_bindings b({
+			{12, [&e]() { e.window.update(); }}
+		});
+		wprintw(e.window.status(), "Test");
+		while (true) {
+			int c = e.window.input();
+			//printf("%d %s\n", c, key_name(c));
+			b.handle(c);
+		}
 	}
-	printf("%d\n", c);
 }
