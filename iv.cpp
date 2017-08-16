@@ -76,6 +76,12 @@ struct buffer
 	}
 } buf;
 
+enum class mode_type {
+	NORMAL,
+	INSERT,
+	COMMAND
+} mode;
+
 struct screen_initializer
 {
 	screen_initializer() { initscr(); }
@@ -86,14 +92,17 @@ class Window : public screen_initializer
 	WINDOW *file_;
 	WINDOW *status_;
 	WINDOW *cmdline_;
+	std::string command_;
 public:
 	Window();
 	~Window();
 	WINDOW *file() { return file_; }
 	WINDOW *status() { return status_; }
 	WINDOW *cmdline() { return cmdline_; }
+	std::string &command() { return command_; }
 	int input() { return wgetch(file()); }
 	void update();
+	void update_cmdline();
 } win;
 
 Window::Window()
@@ -119,6 +128,16 @@ void Window::update()
 	clear();
 	for (WINDOW *w: {file(), status(), cmdline()})
 		wrefresh(w);
+}
+
+void Window::update_cmdline()
+{
+	wclear(cmdline());
+	if (mode == mode_type::COMMAND) {
+		wprintw(cmdline(), ":");
+		wprintw(cmdline(), command().c_str());
+	}
+	wrefresh(cmdline());
 }
 
 void handle_command(const std::string &command)
@@ -155,12 +174,6 @@ void handle_command(const std::string &command)
 	}
 }
 
-enum class mode_type {
-	NORMAL,
-	INSERT,
-	COMMAND
-} mode;
-
 struct key_bindings
 {
 	typedef std::pair<const int, std::function<void ()>> binding;
@@ -183,8 +196,6 @@ void key_bindings::add_command_binding(int key, const char *cmd)
 	bindings.emplace(key, std::bind(handle_command, cmd));
 }
 
-std::string command;
-
 key_bindings any_bindings({
 	{12, []() { win.update(); }} /* C-L */
 });
@@ -195,12 +206,20 @@ key_bindings normal_bindings({
 		wclear(win.cmdline());
 		wprintw(win.cmdline(), ":");
 		wrefresh(win.cmdline());
-		command = std::string();
+		win.command() = std::string();
 	}}
 });
 
 key_bindings insert_bindings({});
-key_bindings command_bindings({});
+key_bindings command_bindings({
+	{127, []() {
+		if (win.command().empty())
+			mode = mode_type::NORMAL;
+		else
+			win.command().pop_back();
+		win.update_cmdline();
+	}}
+});
 
 void handle_key()
 {
@@ -211,6 +230,10 @@ void handle_key()
 			break;
 		if (mode == mode_type::NORMAL && normal_bindings.handle(c))
 			break;
+		if (mode == mode_type::INSERT && insert_bindings.handle(c))
+			break;
+		if (mode == mode_type::COMMAND && command_bindings.handle(c))
+			break;
 		if (mode != mode_type::NORMAL && c == 27) {
 			mode = mode_type::NORMAL;
 			win.update();
@@ -218,7 +241,7 @@ void handle_key()
 		}
 		if (mode == mode_type::COMMAND && std::isprint(c)) {
 			char string[] = {(char)c, '\0'};
-			command.push_back(c);
+			win.command().push_back(c);
 			wprintw(win.cmdline(), string);
 			wrefresh(win.cmdline());
 			break;
@@ -227,9 +250,10 @@ void handle_key()
 			mode = mode_type::NORMAL;
 			wclear(win.cmdline());
 			wrefresh(win.cmdline());
-			handle_command(command);
+			handle_command(win.command());
 			break;
 		}
+		flash();
 	} while (false);
 }
 
@@ -244,7 +268,7 @@ int main(int argc, char **argv)
 
 #include "config.cpp"
 
-	wprintw(win.file(), "Test");
+	wprintw(win.file(), "IV -- simple vi clone");
 	while (true) {
 		try {
 			handle_key();
