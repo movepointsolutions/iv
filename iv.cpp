@@ -102,6 +102,8 @@ public:
 	std::string &command() { return command_; }
 	int input() { return wgetch(file()); }
 	void update();
+	void update_file();
+	void update_status();
 	void update_cmdline();
 } win;
 
@@ -130,6 +132,34 @@ void Window::update()
 		wrefresh(w);
 }
 
+void Window::update_file()
+{
+	int x = 0, y = 0;
+	int maxx, maxy;
+	getmaxyx(file(), maxy, maxx);
+	wclear(file());
+	for (std::list<char>::iterator i = buf.chars.begin(); i != buf.chars.end(); ++i) {
+		if (x >= maxx || y >= maxy)
+			break;
+
+		if (*i == '\n') {
+			x = 0;
+			y++;
+		} else {
+			x++;
+		}
+
+		waddch(file(), *i);
+	}
+}
+
+void Window::update_status()
+{
+	wclear(status());
+	waddstr(status(), buf.filename.empty() ? "Untitled" : buf.filename.c_str());
+	wrefresh(status());
+}
+
 void Window::update_cmdline()
 {
 	wclear(cmdline());
@@ -153,24 +183,28 @@ void handle_command(const std::string &command)
 			buf.r(filename);
 		else
 			buf.r();
+		win.update_file();
 	} else if (arg0 == "w") {
 		std::string filename;
 		if (args >> filename)
 			buf.w(filename);
 		else
 			buf.w();
-	} else if (arg0 == "o") {
+	} else if (arg0 == "o" || arg0 == "e") {
 		std::string filename;
 		if (args >> filename)
 			buf.o(filename);
 		else
 			buf.o();
+		win.update_file();
+		win.update_status();
 	} else if (arg0 == "saveas") {
 		std::string filename;
 		if (args >> filename)
 			buf.saveas(filename);
 		else
 			buf.saveas();
+		win.update_status();
 	}
 }
 
@@ -269,6 +303,7 @@ int main(int argc, char **argv)
 #include "config.cpp"
 
 	wprintw(win.file(), "IV -- simple vi clone");
+	win.update_status();
 	while (true) {
 		try {
 			handle_key();
