@@ -97,6 +97,22 @@ void handle_command(const std::string &command)
 	} else if (arg0 == "n_$") {
 		buf.cursor_x = buf.cursor->second.size() - 2;
 		win.update_file();
+	} else if (arg0 == "n_i") {
+		buf.cursor_x = std::min(buf.cursor->second.size() - 1, buf.cursor_x);
+		mode = mode_type::INSERT;
+		win.update_file();
+	} else if (arg0 == "n_a") {
+		buf.cursor_x = std::min(buf.cursor->second.size() - 1, buf.cursor_x + 1);
+		mode = mode_type::INSERT;
+		win.update_file();
+	} else if (arg0 == "n_I") {
+		buf.cursor_x = 0;
+		mode = mode_type::INSERT;
+		win.update_file();
+	} else if (arg0 == "n_A") {
+		buf.cursor_x = buf.cursor->second.size() - 1;
+		mode = mode_type::INSERT;
+		win.update_file();
 	} else if (arg0 != "misc") {
 		throw std::invalid_argument("unknown command: " + arg0);
 	} else if (!(args >> arg1)) {
@@ -109,6 +125,7 @@ void handle_command(const std::string &command)
 		win.update_cmdline();
 		win.activate_window();
 	} else if (arg1 == "escape") {
+		buf.cursor_x = std::min((int)buf.cursor->second.size() - 2, std::max((int)buf.cursor_x, 1) - 1);
 		mode = mode_type::NORMAL;
 		win.update();
 	} else if (arg1 == "c:return") {

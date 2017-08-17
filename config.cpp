@@ -29,3 +29,7 @@ imap(4, "halfpage down");
 
 nmap('0', "n_0");
 nmap('$', "n_$");
+nmap('i', "n_i");
+nmap('a', "n_a");
+nmap('I', "n_I");
+nmap('A', "n_A");
