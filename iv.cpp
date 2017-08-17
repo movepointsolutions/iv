@@ -24,9 +24,10 @@ const int tab_size = 8;
 
 struct buffer
 {
-	typedef std::map<std::pair<int, int>, char> chars_type;
+	typedef std::map<int, std::string> chars_type;
 	chars_type chars;
 	chars_type::iterator start, cursor;
+	size_t cursor_x;
 	std::string filename;
 
 	buffer() : chars(), start(chars.begin()), cursor(chars.begin()) {}
@@ -38,62 +39,59 @@ struct buffer
 	template <class Iterator>
 	void assign(Iterator begin, Iterator end)
 	{
-		int x = 0, y = 0;
 		chars.clear();
+		std::string *line = NULL;
+		auto push = [this, &line](char c) {
+			if (line == NULL)
+				line = &chars.insert(std::make_pair(chars.size(), std::string())).first->second;
+			line->push_back(c);
+		};
 		while (begin != end) {
-			if (*begin == '\t') {
+			switch (*begin) {
+			case '\t':
 				for (int i = 0; i < tab_size; i++)
-					chars.insert(std::make_pair(std::make_pair(y, x++), ' '));
-			} else if (*begin == '\n') {
-				chars.insert(std::make_pair(std::make_pair(y, x), *begin));
-				x = 0;
-				y++;
-			} else {
-				chars.insert(std::make_pair(std::make_pair(y, x), *begin));
-				x++;
+					push(' ');
+				break;
+			case '\n':
+				push(*begin);
+				line = NULL;
+				break;
+			default:
+				push(*begin);
+				break;
 			}
 			++begin;
 		}
 		start = cursor = chars.begin();
+		cursor_x = 0;
 	}
 
-	void set_cursor(chars_type::iterator _cursor)
+	void adjust_start()
 	{
-		if (_cursor != chars.end()) {
-			cursor = _cursor;
-			while (cursor->first.first >= start->first.first + LINES - 2)
-				do {
-					++start;
-				} while (start->first.second);
-			while (cursor->first.first < start->first.first)
-				do {
-					--start;
-				} while (start->first.second);
-		}
+		while (cursor->first >= start->first + LINES - 2)
+			++start;
+		while (cursor->first < start->first)
+			--start;
 	}
 
-	void set_start(chars_type::iterator _start)
+	void set_start(int _start)
 	{
-		if (_start != chars.end()) {
-			start = _start;
-			while (cursor->first.first >= start->first.first + LINES - 2)
-				--cursor;
-			while (cursor->first.first < start->first.first)
-				++cursor;
-		}
+		start = --chars.upper_bound(_start);
+		while (cursor->first >= start->first + LINES - 2)
+			--cursor;
+		while (cursor->first < start->first)
+			++cursor;
 	}
 
 	void read(std::istream &stream)
 	{
 		assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
-		start = cursor = chars.begin();
 	}
 
 	void write(std::ostream &stream)
 	{
-		std::ostreambuf_iterator<char> it(stream);
 		for (auto c : chars)
-			*it++ = c.second;
+			stream << c.second;
 	}
 
 	void r(std::string _filename = std::string())
@@ -200,18 +198,13 @@ void Window::update()
 
 void Window::update_file()
 {
-	int col = 0;
 	wclear(file);
-	wmove(file, 0, 0);
+	int line = buf.start->first;
 	for (buffer::chars_type::iterator i = buf.start; i != buf.chars.end(); i++) {
-		if (col < COLS)
-			waddch(file, i->second);
-		if (i->second == '\n')
-			col = 0;
-		else
-			col++;
+		wmove(file, line++ - buf.start->first, 0);
+		waddnstr(file, i->second.c_str(), COLS);
 	}
-	wmove(file, buf.cursor->first.first - buf.start->first.first, buf.cursor->first.second - buf.start->first.second);
+	wmove(file, buf.cursor->first - buf.start->first, buf.cursor_x);
 }
 
 void Window::update_status()
@@ -305,8 +298,8 @@ void sigint_handler(int)
 {
 	if (quit_on_sigint)
 		std::exit(0);
-	else
-		win.update();
+	mode = mode_type::NORMAL;
+	win.update();
 }
 
 int main(int argc, char **argv)

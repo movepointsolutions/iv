@@ -37,20 +37,27 @@ void handle_command(const std::string &command)
 		std::string direction;
 		if (!(args >> direction))
 			throw std::invalid_argument(":cursor needs an argument");
-		if (direction == "left")
-			buf.set_cursor(buf.chars.find(std::make_pair(buf.cursor->first.first, buf.cursor->first.second - 1)));
-		else if (direction == "right")
-			buf.set_cursor(buf.chars.find(std::make_pair(buf.cursor->first.first, buf.cursor->first.second + 1)));
-		else if (direction == "up")
-			buf.set_cursor(buf.chars.find(std::make_pair(buf.cursor->first.first - 1, buf.cursor->first.second)));
-		else if (direction == "down")
-			buf.set_cursor(buf.chars.find(std::make_pair(buf.cursor->first.first + 1, buf.cursor->first.second)));
+		if (direction == "left" && buf.cursor_x > 0)
+			buf.cursor_x--;
+		else if (direction == "right" && buf.cursor_x < buf.cursor->second.size() - 1 - (mode == mode_type::NORMAL))
+			buf.cursor_x++;
+		else if (direction == "up" && buf.cursor != buf.chars.begin()) {
+			--buf.cursor;
+			buf.adjust_start();
+		} else if (direction == "down") {
+			++buf.cursor;
+			if (buf.cursor == buf.chars.end())
+				--buf.cursor;
+			buf.adjust_start();
+		}
 		win.update_file();
 	} else if (arg0 == "0") {
-		buf.set_cursor(buf.chars.begin());
+		buf.cursor = buf.chars.begin();
 		win.update_file();
 	} else if (arg0 == "100") {
-		buf.set_cursor(buf.chars.find(std::make_pair(100, 0)));
+		buf.cursor = buf.chars.find(100);
+		if (buf.cursor == buf.chars.end())
+			buf.cursor = --buf.chars.upper_bound(100);
 		win.update_file();
 	} else if (arg0 == "refresh") {
 		win.update();
@@ -68,9 +75,9 @@ void handle_command(const std::string &command)
 		std::string direction;
 		if (args >> direction) {
 			if (direction == "up") {
-				buf.set_start(buf.chars.find(std::make_pair(std::max(0, buf.start->first.first - LINES + 2), 0)));
+				buf.set_start(std::max(0, buf.start->first - LINES + 2));
 			} else if (direction == "down") {
-				buf.set_start(buf.chars.find(std::make_pair(buf.start->first.first + LINES - 2, 0)));
+				buf.set_start(buf.start->first + LINES - 2);
 			}
 			win.update_file();
 		}
@@ -78,9 +85,9 @@ void handle_command(const std::string &command)
 		std::string direction;
 		if (args >> direction) {
 			if (direction == "up") {
-				buf.set_start(buf.chars.find(std::make_pair(std::max(0, buf.start->first.first - LINES / 2 + 1), 0)));
+				buf.set_start(std::max(0, buf.start->first - LINES / 2 + 1));
 			} else if (direction == "down") {
-				buf.set_start(buf.chars.find(std::make_pair(buf.start->first.first + LINES / 2 - 1, 0)));
+				buf.set_start(buf.start->first + LINES / 2 - 1);
 			}
 			win.update_file();
 		}
