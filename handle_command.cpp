@@ -91,6 +91,12 @@ void handle_command(const std::string &command)
 			}
 			win.update_file();
 		}
+	} else if (arg0 == "n_0") {
+		buf.cursor_x = 0;
+		win.update_file();
+	} else if (arg0 == "n_$") {
+		buf.cursor_x = buf.cursor->second.size() - 2;
+		win.update_file();
 	} else if (arg0 != "misc") {
 		throw std::invalid_argument("unknown command: " + arg0);
 	} else if (!(args >> arg1)) {
