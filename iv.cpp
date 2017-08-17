@@ -211,6 +211,8 @@ void Window::update_status()
 {
 	wclear(status);
 	waddstr(status, buf.filename.empty() ? "Untitled" : buf.filename.c_str());
+	if (mode == mode_type::INSERT)
+		waddstr(status, " ---INSERT---");
 	wrefresh(status);
 }
 
