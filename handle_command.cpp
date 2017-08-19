@@ -18,6 +18,9 @@ void handle_command(const std::string &command)
 			buf.w(filename);
 		else
 			buf.w();
+	} else if (arg0 == "wq") {
+		buf.w();
+		exit(0);
 	} else if (arg0 == "o" || arg0 == "e") {
 		std::string filename;
 		if (args >> filename)
