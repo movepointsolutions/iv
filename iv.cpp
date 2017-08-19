@@ -46,7 +46,7 @@ struct buffer
 				line = &chars.insert(std::make_pair(chars.size(), std::string())).first->second;
 			line->push_back(c);
 		};
-		while (begin != end) {
+		for (; begin != end; ++begin) {
 			switch (*begin) {
 			case '\t':
 				for (int i = 0; i < tab_size; i++)
@@ -60,7 +60,6 @@ struct buffer
 				push(*begin);
 				break;
 			}
-			++begin;
 		}
 		start = cursor = chars.begin();
 		cursor_x = 0;
