@@ -120,6 +120,11 @@ void handle_command(const std::string &command)
 		throw std::invalid_argument("unknown command: " + arg0);
 	} else if (!(args >> arg1)) {
 		throw std::invalid_argument("need argument: " + arg0);
+	} else if (arg1 == "i:backspace") {
+		if (buf.cursor_x > 0) {
+			buf.cursor->second.erase(buf.cursor_x--, 1);
+			win.update_file();
+		}
 	} else if (arg1 == "c:backspace") {
 		if (win.command.empty())
 			mode = mode_type::NORMAL;

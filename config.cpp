@@ -14,6 +14,7 @@ map(CTRL('L'), "refresh");
 
 nmap('i', "mode insert");
 nmap(':', "mode command");
+imap(127, "misc i:backspace");
 cmap(127, "misc c:backspace");
 map(27, "misc escape");
 cmap('\n', "misc c:return");
