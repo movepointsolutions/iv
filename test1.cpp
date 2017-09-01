@@ -3,12 +3,12 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include "string.h"
+#include "list.h"
 
 // simple stream editor using iv::string as text container
 struct f1_type
 {
-	iv::string text;
+	iv::list<char> text;
 	void operator ()(char c)
 	{
 		if (std::isalpha(c))
@@ -35,12 +35,12 @@ int main(int argc, char **argv)
 {
 	std::cout << "Test1" << std::endl;
 	{
-		iv::string s1;
+		iv::list<char> s1;
 		assert(s1.begin() == s1.end());
-		iv::string::const_iterator end = s1.begin();
+		iv::list<char>::const_iterator end = s1.begin();
 		s1.push_back('\0');
 		assert(end == s1.end());
-		iv::string::const_iterator j = s1.begin();
+		iv::list<char>::const_iterator j = s1.begin();
 		assert(j != s1.end());
 		assert(j == s1.root());
 		assert(!j.left());
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 		//assert(!s1.begin().expired());
 		//assert(!j.expired());
 		s1.push_back('\001');
-		iv::string::const_iterator k = s1.begin();
+		iv::list<char>::const_iterator k = s1.begin();
 		//if (k != end)
 			//std::cerr << (int)*k << " " << k.lock() << std::endl;
 		++k;

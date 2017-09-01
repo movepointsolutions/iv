@@ -15,6 +15,7 @@
 #include <ncurses.h>
 #include <signal.h>
 #include <stdio.h>
+#include "list.h"
 
 #ifndef CTRL
 #define CTRL(c) ((c) & 037)

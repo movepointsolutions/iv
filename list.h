@@ -1,5 +1,5 @@
-#ifndef IV_STRING_H
-#define IV_STRING_H
+#ifndef IV_LIST_H
+#define IV_LIST_H
 
 #include <algorithm>
 #include <exception>
@@ -15,30 +15,34 @@ namespace iv
 namespace internal
 {
 
+template <class T>
 struct tree;
 
+template <class T>
 struct tree_base
 {
-	tree *l, *r; // left, right
+	tree<T> *l, *r; // left, right
 	tree_base *p; // parent
 
-	tree_base(tree *_l, tree *_r) : l(_l), r(_r) { }
+	tree_base(tree<T> *_l, tree<T> *_r) : l(_l), r(_r) { }
 
 	void resurrect();
 };
 
-struct tree_head : public tree_base
+template <class T>
+struct tree_head : public tree_base<T>
 {
-	tree_head(tree *_root = nullptr) : tree_base(_root, nullptr) { }
-	tree *root()
+	tree_head(tree<T> *_root = nullptr) : tree_base<T>(_root, nullptr) { }
+	tree<T> *root()
 	{
-		return l;
+		return this->l;
 	}
 };
 
-struct tree : public tree_base
+template <class T>
+struct tree : public tree_base<T>
 {
-	char v; // contained value
+	T v; // contained value
 	int h; // height
 
 	int height() const
@@ -49,16 +53,23 @@ struct tree : public tree_base
 			return h;
 	}
 
-	tree(tree *_l, char _v, tree *_r)
-		: tree_base(_l, _r), v(_v), h(std::max(l->height(), r->height()) + 1)
+	tree(tree *_l, const T &_v, tree *_r)
+		: tree_base<T>(_l, _r), v(_v), h(std::max(this->l->height(), this->r->height()) + 1)
 	{
+		if (this->l)
+			this->l->p = this;
+		if (this->r)
+			this->r->p = this;
 	}
 
 	tree *add_min(char x);
 	tree *add_max(char x);
+protected:
+	static tree *balance(tree *l, const T &v, tree *r);
 };
 
-void tree_base::resurrect()
+template <class T>
+void tree_base<T>::resurrect()
 {
 	//std::cerr << "Resurrecting " << this << std::endl;
 	if (l) {
@@ -103,7 +114,8 @@ void tree_base::resurrect()
         Node{l; v; r; h=(if hl >= hr then hl + 1 else hr + 1)}
 */
 
-tree *balance(tree *l, char v, tree *r)
+template <class T>
+tree<T> *tree<T>::balance(tree<T> *l, const T &v, tree<T> *r)
 {
 	if (l->height() > r->height() + 2) {
 		if (l->l->height() >= l->r->height()) {
@@ -127,66 +139,69 @@ tree *balance(tree *l, char v, tree *r)
 		return new tree(l, v, r);
 }
 
-tree *tree::add_min(char x)
+template <class T>
+tree<T> *tree<T>::add_min(char x)
 {
 	if (this == nullptr)
 		return new tree(nullptr, x, nullptr);
 	else
-		return balance(l->add_min(x), v, r);
+		return balance(this->l->add_min(x), v, this->r);
 }
 
-tree *tree::add_max(char x)
+template <class T>
+tree<T> *tree<T>::add_max(char x)
 {
 	if (this == nullptr)
 		return new tree(nullptr, x, nullptr);
 	else
-		return balance(l, v, r->add_max(x));
+		return balance(this->l, v, this->r->add_max(x));
 }
 
 } // namespace iv::internal
 
-class string_const_iterator : public simple_ptr<const internal::tree_base>
+template <class T>
+class list_const_iterator : public simple_ptr<const internal::tree_base<T>>
 {
 public:
 	using iterator_category = std::bidirectional_iterator_tag;
-	using value_type = const internal::tree_base;
+	using value_type = const internal::tree_base<T>;
 	using difference_type = int;
-	using pointer = const internal::tree_base *;
-	using reference = const internal::tree_base &;
+	using pointer = const internal::tree_base<T> *;
+	using reference = const internal::tree_base<T> &;
 
-	string_const_iterator(const internal::tree_base *node = nullptr)
-		: simple_ptr<const internal::tree_base>(node)
+	list_const_iterator(const internal::tree_base<T> *node = nullptr)
+		: simple_ptr<const internal::tree_base<T>>(node)
 	{
-	}
-
-	string_const_iterator left()
-	{
-		return string_const_iterator((*this)->l);
-	}
-	string_const_iterator right()
-	{
-		return string_const_iterator((*this)->r);
-	}
-	string_const_iterator parent()
-	{
-		return string_const_iterator((*this)->p);
 	}
 
-	bool operator ==(const string_const_iterator &other)
+	list_const_iterator left()
 	{
-		return get() == other.get();
+		return list_const_iterator((*this)->l);
 	}
-	bool operator !=(const string_const_iterator &other)
+	list_const_iterator right()
 	{
-		return get() != other.get();
+		return list_const_iterator((*this)->r);
+	}
+	list_const_iterator parent()
+	{
+		return list_const_iterator((*this)->p);
+	}
+
+	bool operator ==(const list_const_iterator &other)
+	{
+		return this->get() == other.get();
+	}
+	bool operator !=(const list_const_iterator &other)
+	{
+		return this->get() != other.get();
 	}
 
 	operator bool()
 	{
-		return *this != string_const_iterator();
+		return *this != list_const_iterator();
 	}
 
-	string_const_iterator &operator ++()
+	list_const_iterator &operator ++()
 	{
 		if (right()) {
 			*this = right();
@@ -199,19 +214,20 @@ public:
 		}
 		return *this;
 	}
-	char operator *()
+	const T &operator *()
 	{
-		return static_cast<const internal::tree *>(get())->v;
+		return static_cast<const internal::tree<T> *>(this->get())->v;
 	}
 };
 
-class string
+template <class T>
+class list
 {
-	simple_ptr<internal::tree_head> head;
+	simple_ptr<internal::tree_head<T>> head;
 public:
-	typedef string_const_iterator const_iterator;
+	typedef list_const_iterator<T> const_iterator;
 
-	string() : head(new internal::tree_head())
+	list() : head(new internal::tree_head<T>())
 	{
 	}
 
@@ -236,16 +252,16 @@ public:
 	void push_front(char c)
 	{
 		head->l = head->root()->add_min(c);
-		head->resurrect();
+		head->l->p = head;
 	}
 	void push_back(char c)
 	{
 		head->l = head->root()->add_max(c);
-		head->resurrect();
+		head->l->p = head;
 		//std::cout << "!" << head->l << " " << head->root()->c << std::endl;
 	}
 };
 
 } // namespace iv
 
-#endif // IV_STRING_H
+#endif // IV_LIST_H
