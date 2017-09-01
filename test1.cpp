@@ -47,19 +47,19 @@ int main(int argc, char **argv)
 		assert(!j.right());
 		++j;
 		assert(j == end);
-		assert(!s1.begin().expired());
-		assert(!j.expired());
+		//assert(!s1.begin().expired());
+		//assert(!j.expired());
 		s1.push_back('\001');
 		iv::string::const_iterator k = s1.begin();
-		if (k != end)
-			std::cerr << (int)*k << " " << k.lock() << std::endl;
+		//if (k != end)
+			//std::cerr << (int)*k << " " << k.lock() << std::endl;
 		++k;
-		if (k != end)
-			std::cerr << (int)*k << " " << k.lock() << std::endl;
+		//if (k != end)
+			//std::cerr << (int)*k << " " << k.lock() << std::endl;
 		assert(k != end);
 		++k;
-		if (k != end)
-			std::cerr << (int)*k << " " << k.lock() << std::endl;
+		//if (k != end)
+			//std::cerr << (int)*k << " " << k.lock() << std::endl;
 		assert(k == s1.end());
 	}
 	std::ifstream random("/dev/urandom", std::ios::binary);
