@@ -322,14 +322,14 @@ int main(int argc, char **argv)
 	} else if (argc < 2){
 		wprintw(win.file, "IV -- simple vi clone");
 		win.update_status();
-	} else if (argv[1] == std::string("--dumpkeys")) {
+	/*} else if (argv[1] == std::string("--dumpkeys")) {
 		quit_on_sigint = true;
 		while (true) {
 			int c = win.input();
-			wprintw(stdscr, "%d %s\n", c, key_name(c));
+			//wprintw(stdscr, "%d %s\n", c, key_name(c));
 			wrefresh(stdscr);
 		}
-		return 0;
+		return 0;*/
 	} else {
 		buf.o(argv[1]);
 		win.update();
